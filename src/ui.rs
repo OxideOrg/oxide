@@ -19,7 +19,7 @@ impl Widget for &Editor {
             .title(APP_NAME)
             .title_alignment(Alignment::Center);
 
-        let (chars, buffer_position) = self.buffers.get(self.current_file_path.clone());
+        let (chars, _) = self.buffers.get(self.current_file_path.clone());
 
         let paragraph = Paragraph::new(String::from_iter(chars))
             .block(block)
