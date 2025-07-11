@@ -97,6 +97,11 @@ impl Editor {
                 buffer.remove(*position as usize - 1);
                 *position -= 1;
             }
+            KeyCode::Enter if self.editor_mode == EditorMode::Insert => {
+                let (buffer, position) = self.buffers.get_mut(self.current_file_path.clone());
+                buffer.insert(*position as usize, '\n');
+                *position += 1;
+            }
             /*KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
                 self.events.send(AppEvent::Quit)
             }*/
