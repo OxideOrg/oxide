@@ -83,7 +83,7 @@ impl Editor {
             }
             KeyCode::Char(input) if self.editor_mode == EditorMode::Insert => {
                 let (buffer, position) = self.buffers.get_mut(self.current_file_path.clone());
-                buffer.push(input);
+                buffer.insert(*position as usize, input);
                 *position += 1;
             }
             KeyCode::Esc if self.editor_mode == EditorMode::Insert => {
@@ -91,6 +91,11 @@ impl Editor {
             }
             KeyCode::Esc if self.editor_mode == EditorMode::Normal => {
                 self.events.send(AppEvent::Quit)
+            }
+            KeyCode::Backspace if self.editor_mode == EditorMode::Insert => {
+                let (buffer, position) = self.buffers.get_mut(self.current_file_path.clone());
+                buffer.remove(*position as usize - 1);
+                *position -= 1;
             }
             /*KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
                 self.events.send(AppEvent::Quit)
