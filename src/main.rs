@@ -2,11 +2,12 @@ use app::APP_NAME;
 use clap::Parser;
 use cli::CliOpt;
 
-use crate::app::App;
+use crate::app::Editor;
 
 pub mod app;
 pub mod cli;
 pub mod event;
+pub mod filesbuffers;
 pub mod ui;
 
 #[tokio::main]
@@ -20,7 +21,7 @@ async fn main() -> color_eyre::Result<()> {
     }
     color_eyre::install()?;
     let terminal = ratatui::init();
-    let result = App::new(cli_opt).run(terminal).await;
+    let result = Editor::new(cli_opt).run(terminal).await;
     ratatui::restore();
     result
 }
