@@ -1,32 +1,58 @@
 use crate::{
     cli::CliOpt,
     event::{AppEvent, Event, EventHandler},
+    filesbuffers::FilesBuffers,
 };
 use ratatui::{
     DefaultTerminal,
-    crossterm::event::{KeyCode, KeyEvent, KeyModifiers},
+    crossterm::event::{KeyCode, KeyEvent},
 };
 
 pub const APP_NAME: &str = "Oxide";
+pub const EMPTY_STRING: &str = "";
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum EditorMode {
+    Normal,
+    Insert,
+    Visual,
+}
 
 /// Application.
 #[derive(Debug)]
-pub struct App {
+pub struct Editor {
     /// Is the application running?
     pub running: bool,
     /// Event handler.
     pub events: EventHandler,
     /// Cli opts
     pub cli_opts: CliOpt,
+    /// Files buffers
+    pub buffers: FilesBuffers,
+    /// Current file path
+    pub current_file_path: String,
+    /// Editor Mode
+    pub editor_mode: EditorMode,
 }
 
-impl App {
+impl Editor {
     /// Constructs a new instance of [`App`].
     pub fn new(cli_opts: CliOpt) -> Self {
+        let current_file_path = EMPTY_STRING.to_string();
+        let mut buffers = FilesBuffers::new();
+        for file_path in cli_opts.file() {
+            buffers.init_file_buffer(file_path.to_string());
+        }
+        if buffers.is_empty() {
+            buffers.init_file_buffer(EMPTY_STRING.to_string());
+        }
         Self {
             running: true,
             events: EventHandler::new(),
             cli_opts,
+            buffers,
+            current_file_path,
+            editor_mode: EditorMode::Normal,
         }
     }
 
@@ -52,10 +78,23 @@ impl App {
     /// Handles the key events and updates the state of [`App`].
     pub fn handle_key_events(&mut self, key_event: KeyEvent) -> color_eyre::Result<()> {
         match key_event.code {
-            KeyCode::Esc | KeyCode::Char('q') => self.events.send(AppEvent::Quit),
-            KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
+            KeyCode::Char('i') if self.editor_mode == EditorMode::Normal => {
+                self.editor_mode = EditorMode::Insert
+            }
+            KeyCode::Char(input) if self.editor_mode == EditorMode::Insert => {
+                let (buffer, position) = self.buffers.get_mut(self.current_file_path.clone());
+                buffer.push(input);
+                *position += 1;
+            }
+            KeyCode::Esc if self.editor_mode == EditorMode::Insert => {
+                self.editor_mode = EditorMode::Normal
+            }
+            KeyCode::Esc if self.editor_mode == EditorMode::Normal => {
                 self.events.send(AppEvent::Quit)
             }
+            /*KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
+                self.events.send(AppEvent::Quit)
+            }*/
             // Other handlers you could add here.
             _ => {}
         }
