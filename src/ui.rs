@@ -5,7 +5,7 @@ use ratatui::{
     widgets::{Block, BorderType, Paragraph, Widget},
 };
 
-use crate::app::App;
+use crate::app::{APP_NAME, App};
 
 impl Widget for &App {
     /// Renders the user interface widgets.
@@ -16,16 +16,15 @@ impl Widget for &App {
     // - https://github.com/ratatui/ratatui/tree/master/examples
     fn render(self, area: Rect, buf: &mut Buffer) {
         let block = Block::bordered()
-            .title("oxide")
+            .title(APP_NAME)
             .title_alignment(Alignment::Center)
             .border_type(BorderType::Rounded);
 
         let text = format!(
-            "This is a tui template.\n\
+            "Welcome to {} explorer.\n\
                 Press `Esc`, `Ctrl-C` or `q` to stop running.\n\
-                Press left and right to increment and decrement the counter respectively.\n\
-                Counter: {}",
-            self.counter
+            ",
+            APP_NAME
         );
 
         let paragraph = Paragraph::new(text)
