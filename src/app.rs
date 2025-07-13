@@ -59,7 +59,11 @@ impl Editor {
     /// Run the application's main loop.
     pub async fn run(mut self, mut terminal: DefaultTerminal) -> color_eyre::Result<()> {
         while self.running {
-            terminal.draw(|frame| frame.render_widget(&self, frame.area()))?;
+            terminal.draw(|frame| {
+                frame.render_widget(&self, frame.area());
+                let file_buffer = self.buffers.get_mut(self.current_file_path.clone());
+                frame.set_cursor_position(file_buffer.to_cursor_position());
+            })?;
             match self.events.next().await? {
                 Event::Tick => self.tick(),
                 Event::Crossterm(event) => {
@@ -82,9 +86,8 @@ impl Editor {
                 self.editor_mode = EditorMode::Insert
             }
             KeyCode::Char(input) if self.editor_mode == EditorMode::Insert => {
-                let (buffer, position) = self.buffers.get_mut(self.current_file_path.clone());
-                buffer.insert(*position as usize, input);
-                *position += 1;
+                let file_buffer = self.buffers.get_mut(self.current_file_path.clone());
+                file_buffer.insert_char(input);
             }
             KeyCode::Esc if self.editor_mode == EditorMode::Insert => {
                 self.editor_mode = EditorMode::Normal
@@ -93,14 +96,12 @@ impl Editor {
                 self.events.send(AppEvent::Quit)
             }
             KeyCode::Backspace if self.editor_mode == EditorMode::Insert => {
-                let (buffer, position) = self.buffers.get_mut(self.current_file_path.clone());
-                buffer.remove(*position as usize - 1);
-                *position -= 1;
+                let file_buffer = self.buffers.get_mut(self.current_file_path.clone());
+                file_buffer.delete_previous_position();
             }
             KeyCode::Enter if self.editor_mode == EditorMode::Insert => {
-                let (buffer, position) = self.buffers.get_mut(self.current_file_path.clone());
-                buffer.insert(*position as usize, '\n');
-                *position += 1;
+                let file_buffer = self.buffers.get_mut(self.current_file_path.clone());
+                file_buffer.create_line();
             }
             /*KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
                 self.events.send(AppEvent::Quit)
