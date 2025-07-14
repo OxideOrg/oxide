@@ -4,10 +4,11 @@ use crate::{
     cli::CliOpt,
     event::{AppEvent, Event, EventHandler},
     filesbuffers::FilesBuffers,
+    ui::FOOTER_SIZE,
 };
 use ratatui::{
-    DefaultTerminal,
     crossterm::event::{KeyCode, KeyEvent},
+    DefaultTerminal,
 };
 
 pub const APP_NAME: &str = "Oxide";
@@ -66,11 +67,16 @@ impl Editor {
 
     /// Run the application's main loop.
     pub async fn run(mut self, mut terminal: DefaultTerminal) -> color_eyre::Result<()> {
+        let terminal_height = terminal.size().expect("Terminal should have size").height - FOOTER_SIZE - 1;
         while self.running {
             terminal.draw(|frame| {
                 frame.render_widget(&self, frame.area());
                 let file_buffer = self.buffers.get_mut(self.current_file_path.clone());
-                frame.set_cursor_position(file_buffer.to_cursor_position());
+                let cursor_position = file_buffer.to_cursor_position();
+                frame.set_cursor_position((
+                    cursor_position.x,
+                    u16::min(cursor_position.y, terminal_height),
+                ));
             })?;
             match self.events.next().await? {
                 Event::Tick => self.tick(),
