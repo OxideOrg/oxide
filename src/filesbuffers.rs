@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fs::File, io::Read};
 
 use ratatui::layout::Position;
 
@@ -29,14 +29,34 @@ impl FilesBuffers {
         self.files.is_empty()
     }
 
-    pub fn init_file_buffer(&mut self, key: String) {
+    pub fn init_file_buffer(&mut self, file_path: String) {
+        let mut buffer = vec![];
+        let mut lines_number = 0;
+        if let Ok(mut file) = File::open(&file_path) {
+            let mut file_content = String::new();
+            file.read_to_string(&mut file_content)
+                .expect("Failed to read file buffer");
+            if file_content.lines().count() == 0 {
+                buffer.push(vec![]);
+            }
+            for line in file_content.lines() {
+                let mut buffer_line = vec![];
+                for c in line.chars() {
+                    buffer_line.push(c);
+                    lines_number += 1;
+                }
+                buffer.push(buffer_line);
+            }
+        } else {
+            buffer.push(vec![]);
+        }
         self.files.insert(
-            key,
+            file_path,
             FileBuffer {
-                file: vec![vec![]],
+                file: buffer,
                 current_line: 0,
                 current_column: 0,
-                lines_number: 0,
+                lines_number,
                 scroll_y: 0,
             },
         );

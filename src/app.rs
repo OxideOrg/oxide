@@ -7,8 +7,8 @@ use crate::{
     ui::FOOTER_SIZE,
 };
 use ratatui::{
-    crossterm::event::{KeyCode, KeyEvent},
     DefaultTerminal,
+    crossterm::event::{KeyCode, KeyEvent},
 };
 
 pub const APP_NAME: &str = "Oxide";
@@ -47,8 +47,12 @@ pub struct Editor {
 impl Editor {
     /// Constructs a new instance of [`App`].
     pub fn new(cli_opts: CliOpt) -> Self {
-        let current_file_path = EMPTY_STRING.to_string();
+        let mut current_file_path = EMPTY_STRING.to_string();
         let mut buffers = FilesBuffers::new();
+        let mut cli_opts_iter = cli_opts.file().iter();
+        if let Some(first_file) = cli_opts_iter.next() {
+            current_file_path = first_file.to_string();
+        }
         for file_path in cli_opts.file() {
             buffers.init_file_buffer(file_path.to_string());
         }
@@ -67,7 +71,8 @@ impl Editor {
 
     /// Run the application's main loop.
     pub async fn run(mut self, mut terminal: DefaultTerminal) -> color_eyre::Result<()> {
-        let terminal_height = terminal.size().expect("Terminal should have size").height - FOOTER_SIZE - 1;
+        let terminal_height =
+            terminal.size().expect("Terminal should have size").height - FOOTER_SIZE - 1;
         while self.running {
             terminal.draw(|frame| {
                 frame.render_widget(&self, frame.area());
