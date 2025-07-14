@@ -4,6 +4,13 @@ use ratatui::layout::Position;
 
 use crate::ui::LINE_NUMBERS_WIDTH;
 
+pub enum Move {
+    Left,
+    Up,
+    Right,
+    Down,
+}
+
 #[derive(Default, Debug, Clone)]
 pub struct FilesBuffers {
     files: HashMap<String, FileBuffer>,
@@ -119,5 +126,31 @@ impl FileBuffer {
         } else if self.current_line > 0 {
             self.delete_line();
         }
+    }
+
+    pub fn move_cursor(&mut self, move_option: Move) {
+        let columns_number = self.get_mut().iter().count() as u16;
+        match move_option {
+            Move::Left => {
+                if self.current_column > 0 {
+                    self.current_column -= 1
+                }
+            }
+            Move::Up => {
+                if self.current_line > 0 {
+                    self.current_line -= 1
+                }
+            }
+            Move::Right => {
+                if self.current_column < columns_number {
+                    self.current_column += 1
+                }
+            }
+            Move::Down => {
+                if self.current_line < self.lines_number {
+                    self.current_line += 1
+                }
+            }
+        };
     }
 }

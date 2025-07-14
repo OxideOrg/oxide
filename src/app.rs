@@ -3,7 +3,7 @@ use std::fmt::Display;
 use crate::{
     cli::CliOpt,
     event::{AppEvent, Event, EventHandler},
-    filesbuffers::FilesBuffers,
+    filesbuffers::{FilesBuffers, Move},
     ui::FOOTER_SIZE,
 };
 use ratatui::{
@@ -100,12 +100,12 @@ impl Editor {
 
     /// Handles the key events and updates the state of [`App`].
     pub fn handle_key_events(&mut self, key_event: KeyEvent) -> color_eyre::Result<()> {
+        let file_buffer = self.buffers.get_mut(self.current_file_path.clone());
         match key_event.code {
             KeyCode::Char('i') if self.editor_mode == EditorMode::Normal => {
                 self.editor_mode = EditorMode::Insert
             }
             KeyCode::Char(input) if self.editor_mode == EditorMode::Insert => {
-                let file_buffer = self.buffers.get_mut(self.current_file_path.clone());
                 file_buffer.insert_char(input);
             }
             KeyCode::Esc if self.editor_mode == EditorMode::Insert => {
@@ -115,12 +115,22 @@ impl Editor {
                 self.events.send(AppEvent::Quit)
             }
             KeyCode::Backspace if self.editor_mode == EditorMode::Insert => {
-                let file_buffer = self.buffers.get_mut(self.current_file_path.clone());
                 file_buffer.delete_previous_position();
             }
             KeyCode::Enter if self.editor_mode == EditorMode::Insert => {
-                let file_buffer = self.buffers.get_mut(self.current_file_path.clone());
                 file_buffer.create_line();
+            }
+            KeyCode::Left | KeyCode::Char('h') if self.editor_mode != EditorMode::Insert => {
+                file_buffer.move_cursor(Move::Left);
+            }
+            KeyCode::Up | KeyCode::Char('k') if self.editor_mode != EditorMode::Insert => {
+                file_buffer.move_cursor(Move::Up);
+            }
+            KeyCode::Right | KeyCode::Char('l') if self.editor_mode != EditorMode::Insert => {
+                file_buffer.move_cursor(Move::Right);
+            }
+            KeyCode::Down | KeyCode::Char('j') if self.editor_mode != EditorMode::Insert => {
+                file_buffer.move_cursor(Move::Down);
             }
             /*KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
                 self.events.send(AppEvent::Quit)
