@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use ratatui::layout::Position;
 
+use crate::ui::LINE_NUMBERS_WIDTH;
+
 #[derive(Default, Debug, Clone)]
 pub struct FilesBuffers {
     files: HashMap<String, FileBuffer>,
@@ -13,6 +15,7 @@ pub struct FileBuffer {
     pub current_line: u16,
     pub current_column: u16,
     pub lines_number: u16,
+    pub scroll_y: u16,
 }
 
 impl FilesBuffers {
@@ -34,6 +37,7 @@ impl FilesBuffers {
                 current_line: 0,
                 current_column: 0,
                 lines_number: 0,
+                scroll_y: 0,
             },
         );
     }
@@ -59,7 +63,7 @@ impl FileBuffer {
 
     pub fn to_cursor_position(&self) -> Position {
         Position {
-            x: self.current_column,
+            x: self.current_column + LINE_NUMBERS_WIDTH,
             y: self.current_line,
         }
     }
