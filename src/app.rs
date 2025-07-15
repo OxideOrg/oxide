@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::io::{stdout, Write};
 
 use crate::{
     cli::CliOpt,
@@ -7,8 +8,8 @@ use crate::{
     ui::FOOTER_SIZE,
 };
 use ratatui::{
-    DefaultTerminal,
     crossterm::event::{KeyCode, KeyEvent},
+    DefaultTerminal,
 };
 
 pub const APP_NAME: &str = "Oxide";
@@ -19,6 +20,12 @@ pub enum EditorMode {
     Normal,
     Insert,
     Visual,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum CursorType {
+    Block,
+    Line,
 }
 
 impl Display for EditorMode {
@@ -103,13 +110,15 @@ impl Editor {
         let file_buffer = self.buffers.get_mut(self.current_file_path.clone());
         match key_event.code {
             KeyCode::Char('i') if self.editor_mode == EditorMode::Normal => {
-                self.editor_mode = EditorMode::Insert
+                self.editor_mode = EditorMode::Insert;
+                Self::set_cursor_type(CursorType::Line);
             }
             KeyCode::Char(input) if self.editor_mode == EditorMode::Insert => {
                 file_buffer.insert_char(input);
             }
             KeyCode::Esc if self.editor_mode == EditorMode::Insert => {
-                self.editor_mode = EditorMode::Normal
+                self.editor_mode = EditorMode::Normal;
+                Self::set_cursor_type(CursorType::Block);
             }
             KeyCode::Esc if self.editor_mode == EditorMode::Normal => {
                 self.events.send(AppEvent::Quit)
@@ -139,6 +148,20 @@ impl Editor {
             _ => {}
         }
         Ok(())
+    }
+
+    fn set_cursor_type(cursor_type: CursorType) {
+        let mut stdout = stdout();
+        match cursor_type {
+            CursorType::Block => {
+                write!(stdout, "\x1b[2 q").unwrap();
+                stdout.flush().unwrap();
+            }
+            CursorType::Line => {
+                write!(stdout, "\x1b[6 q").unwrap();
+                stdout.flush().unwrap();
+            }
+        }
     }
 
     /// Handles the tick event of the terminal.
