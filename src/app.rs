@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use std::io::{stdout, Write};
+use std::io::{Write, stdout};
 
 use crate::{
     cli::CliOpt,
@@ -8,8 +8,8 @@ use crate::{
     ui::FOOTER_SIZE,
 };
 use ratatui::{
-    crossterm::event::{KeyCode, KeyEvent},
     DefaultTerminal,
+    crossterm::event::{KeyCode, KeyEvent},
 };
 
 pub const APP_NAME: &str = "Oxide";
@@ -49,6 +49,8 @@ pub struct Editor {
     pub current_file_path: String,
     /// Editor Mode
     pub editor_mode: EditorMode,
+    /// Repetitions buffer
+    pub repetitions: String,
 }
 
 impl Editor {
@@ -73,6 +75,7 @@ impl Editor {
             buffers,
             current_file_path,
             editor_mode: EditorMode::Normal,
+            repetitions: EMPTY_STRING.to_string(),
         }
     }
 
@@ -98,24 +101,30 @@ impl Editor {
                         self.handle_key_events(key_event)?
                     }
                 }
-                Event::App(app_event) => match app_event {
-                    AppEvent::Quit => self.quit(),
-                    AppEvent::NormalMode => {
-                        self.editor_mode = EditorMode::Insert;
-                        Self::set_cursor_type(CursorType::Line);
+                Event::App(app_event) => {
+                    let repetitions = self.repetitions.parse::<u16>().unwrap_or(1);
+                    self.repetitions = EMPTY_STRING.to_string();
+                    for _ in 0..repetitions {
+                        match app_event {
+                            AppEvent::Quit => self.running = false,
+                            AppEvent::NormalMode => {
+                                self.editor_mode = EditorMode::Insert;
+                                Self::set_cursor_type(CursorType::Line);
+                            }
+                            AppEvent::InsertMode => {
+                                self.editor_mode = EditorMode::Normal;
+                                Self::set_cursor_type(CursorType::Block);
+                            }
+                            AppEvent::CreateLine => file_buffer.create_line(),
+                            AppEvent::WriteAfterCursor(input) => file_buffer.insert_char(input),
+                            AppEvent::DeleteBeforeCursor => file_buffer.delete_previous_position(),
+                            AppEvent::MoveLeft => file_buffer.move_cursor(Move::Left),
+                            AppEvent::MoveUp => file_buffer.move_cursor(Move::Up),
+                            AppEvent::MoveRight => file_buffer.move_cursor(Move::Right),
+                            AppEvent::MoveDown => file_buffer.move_cursor(Move::Down),
+                        }
                     }
-                    AppEvent::InsertMode => {
-                        self.editor_mode = EditorMode::Normal;
-                        Self::set_cursor_type(CursorType::Block);
-                    }
-                    AppEvent::CreateLine => file_buffer.create_line(),
-                    AppEvent::WriteAfterCursor(input) => file_buffer.insert_char(input),
-                    AppEvent::DeleteBeforeCursor => file_buffer.delete_previous_position(),
-                    AppEvent::MoveLeft => file_buffer.move_cursor(Move::Left),
-                    AppEvent::MoveUp => file_buffer.move_cursor(Move::Up),
-                    AppEvent::MoveRight => file_buffer.move_cursor(Move::Right),
-                    AppEvent::MoveDown => file_buffer.move_cursor(Move::Down)
-                },
+                }
             }
         }
         Ok(())
@@ -124,6 +133,14 @@ impl Editor {
     /// Handles the key events and updates the state of [`App`].
     pub fn handle_key_events(&mut self, key_event: KeyEvent) -> color_eyre::Result<()> {
         match key_event.code {
+            KeyCode::Char(input)
+                if self.editor_mode != EditorMode::Insert && input.is_ascii_digit() =>
+            {
+                // IMPORTANT: specific to this action :
+                // Don't process it as an event so that repetitions can be processed seemlessly in
+                // events processing
+                self.repetitions += &input.to_string()
+            }
             KeyCode::Char('i') if self.editor_mode == EditorMode::Normal => {
                 self.events.send(AppEvent::NormalMode);
             }
@@ -186,9 +203,4 @@ impl Editor {
     /// The tick event is where you can update the state of your application with any logic that
     /// needs to be updated at a fixed frame rate. E.g. polling a server, updating an animation.
     pub fn tick(&self) {}
-
-    /// Set running to false to quit the application.
-    pub fn quit(&mut self) {
-        self.running = false;
-    }
 }
