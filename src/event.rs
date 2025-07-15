@@ -32,6 +32,17 @@ pub enum Event {
 #[derive(Clone, Debug)]
 pub enum AppEvent {
     Quit,
+    NormalMode,
+    InsertMode,
+    MoveLeft,
+    MoveUp,
+    MoveRight,
+    MoveDown,
+    CreateLine,
+    WriteAfterCursor(char),
+    DeleteBeforeCursor,
+    MoveToNextWord,
+    MoveToPreviousWord,
 }
 
 /// Terminal event handler.

@@ -4,6 +4,13 @@ use ratatui::layout::Position;
 
 use crate::ui::LINE_NUMBERS_WIDTH;
 
+pub enum Move {
+    Left,
+    Up,
+    Right,
+    Down,
+}
+
 #[derive(Default, Debug, Clone)]
 pub struct FilesBuffers {
     files: HashMap<String, FileBuffer>,
@@ -89,6 +96,7 @@ impl FileBuffer {
     }
 
     pub fn create_line(&mut self) {
+        //TODO: Create line should create line at current position and not only after current line
         self.file.insert(self.current_line as usize + 1, vec![]);
         self.current_line += 1;
         self.current_column = 0;
@@ -119,5 +127,77 @@ impl FileBuffer {
         } else if self.current_line > 0 {
             self.delete_line();
         }
+    }
+
+    pub fn move_cursor(&mut self, move_option: Move) {
+        let columns_number = self.get_mut().iter().count() as u16;
+        match move_option {
+            Move::Left => {
+                if self.current_column > 0 {
+                    self.current_column -= 1
+                }
+            }
+            Move::Up => {
+                if self.current_line > 0 {
+                    self.current_line -= 1
+                }
+            }
+            Move::Right => {
+                if self.current_column < columns_number {
+                    self.current_column += 1
+                }
+            }
+            Move::Down => {
+                if self.current_line < self.lines_number {
+                    self.current_line += 1
+                }
+            }
+        };
+    }
+
+    pub fn move_to_next_word(&mut self) {
+        let columns_number = self.get_mut().iter().count() as u16;
+        let mut index = self.current_column;
+        {
+            let line = self.get_mut();
+            let mut is_parsing_word = false;
+            while index < columns_number {
+                let Some(c) = line.get(index as usize) else {
+                    return;
+                };
+                if is_parsing_word && *c == ' ' {
+                    break;
+                }
+                if *c != ' ' {
+                    is_parsing_word = true;
+                }
+                index += 1;
+            }
+        }
+        self.current_column = index;
+    }
+
+    pub fn move_to_previous_word(&mut self) {
+        if self.current_column < 1 {
+            return;
+        };
+        let mut index = self.current_column - 1;
+        {
+            let line = self.get_mut();
+            let mut is_parsing_word = false;
+            while index > 0 {
+                let Some(c) = line.get(index as usize) else {
+                    return;
+                };
+                if is_parsing_word && *c == ' ' {
+                    break;
+                }
+                if *c != ' ' {
+                    is_parsing_word = true;
+                }
+                index -= 1;
+            }
+        }
+        self.current_column = index;
     }
 }
