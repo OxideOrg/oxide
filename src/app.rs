@@ -51,6 +51,16 @@ pub struct Editor {
     pub editor_mode: EditorMode,
     /// Repetitions buffer
     pub repetitions: String,
+    /// Command popup
+    pub command_popup: CommandPopup,
+}
+
+#[derive(Debug)]
+pub struct CommandPopup {
+    /// Is the popup shown ?
+    pub running: bool,
+    /// Command input field
+    pub input_field: String,
 }
 
 impl Editor {
@@ -76,6 +86,10 @@ impl Editor {
             current_file_path,
             editor_mode: EditorMode::Normal,
             repetitions: EMPTY_STRING.to_string(),
+            command_popup: CommandPopup {
+                running: false,
+                input_field: EMPTY_STRING.to_string(),
+            },
         }
     }
 
@@ -99,7 +113,11 @@ impl Editor {
                 Event::Tick => self.tick(),
                 Event::Crossterm(event) => {
                     if let crossterm::event::Event::Key(key_event) = event {
-                        self.handle_key_events(key_event)?
+                        if self.command_popup.running {
+                            self.handle_command_key_events(key_event)?
+                        } else {
+                            self.handle_key_events(key_event)?
+                        }
                     }
                 }
                 Event::App(app_event) => {
@@ -125,10 +143,43 @@ impl Editor {
                             AppEvent::MoveDown => file_buffer.move_cursor(Move::Down),
                             AppEvent::MoveToNextWord => file_buffer.move_to_next_word(),
                             AppEvent::MoveToPreviousWord => file_buffer.move_to_previous_word(),
+                            AppEvent::CommandPopup => self.command_popup.running = true,
+                            AppEvent::WriteInCommandInput(input) => {
+                                self.command_popup.input_field += &input.to_string();
+                            }
+                            AppEvent::DeleteLastInCommandInput => {
+                                if !self.command_popup.input_field.is_empty() {
+                                    self.command_popup
+                                        .input_field
+                                        .remove(self.command_popup.input_field.len() - 1);
+                                }
+                            }
+                            AppEvent::ExecuteCommand => {
+                                //TODO : command processing
+                            }
                         }
                     }
                 }
             }
+        }
+        Ok(())
+    }
+
+    /// Handles the key events and updates the state of command popup
+    pub fn handle_command_key_events(&mut self, key_event: KeyEvent) -> color_eyre::Result<()> {
+        match key_event.code {
+            KeyCode::Esc => self.exit_popup(),
+            KeyCode::Char(input) => {
+                self.events.send(AppEvent::WriteInCommandInput(input));
+            }
+            KeyCode::Backspace => {
+                self.events.send(AppEvent::DeleteLastInCommandInput);
+            }
+            KeyCode::Enter => {
+                self.events.send(AppEvent::ExecuteCommand);
+                self.exit_popup();
+            }
+            _ => {}
         }
         Ok(())
     }
@@ -184,6 +235,9 @@ impl Editor {
             KeyCode::Down | KeyCode::Char('b') if self.editor_mode != EditorMode::Insert => {
                 self.events.send(AppEvent::MoveToPreviousWord)
             }
+            KeyCode::Down | KeyCode::Char(':') if self.editor_mode != EditorMode::Insert => {
+                self.events.send(AppEvent::CommandPopup)
+            }
             /*KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
                 self.events.send(AppEvent::Quit)
             }*/
@@ -212,4 +266,9 @@ impl Editor {
     /// The tick event is where you can update the state of your application with any logic that
     /// needs to be updated at a fixed frame rate. E.g. polling a server, updating an animation.
     pub fn tick(&self) {}
+
+    fn exit_popup(&mut self) {
+        self.command_popup.running = false;
+        self.command_popup.input_field = EMPTY_STRING.to_string();
+    }
 }
