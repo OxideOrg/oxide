@@ -1,5 +1,8 @@
 use std::fmt::Display;
+use std::fs::{File, OpenOptions};
 use std::io::{Write, stdout};
+use std::path::Path;
+use std::sync::Mutex;
 
 use crate::{
     cli::CliOpt,
@@ -7,6 +10,7 @@ use crate::{
     filesbuffers::{FilesBuffers, Move},
     ui::FOOTER_SIZE,
 };
+use chrono::{DateTime, Local};
 use ratatui::{
     DefaultTerminal,
     crossterm::event::{KeyCode, KeyEvent},
@@ -53,6 +57,10 @@ pub struct Editor {
     pub repetitions: String,
     /// Command popup
     pub command_popup: CommandPopup,
+    /// Saver lock
+    lock: Mutex<()>,
+    /// Last save date
+    last_save: DateTime<Local>,
 }
 
 #[derive(Debug)]
@@ -68,12 +76,17 @@ impl Editor {
     pub fn new(cli_opts: CliOpt) -> Self {
         let mut current_file_path = EMPTY_STRING.to_string();
         let mut buffers = FilesBuffers::new();
-        let mut cli_opts_iter = cli_opts.file().iter();
-        if let Some(first_file) = cli_opts_iter.next() {
-            current_file_path = first_file.to_string();
-        }
         for file_path in cli_opts.file() {
-            buffers.init_file_buffer(file_path.to_string());
+            let mut actual_path = file_path.clone();
+            if let Ok(file_path) = Path::new(file_path).canonicalize() {
+                if let Some(file_path) = file_path.to_str() {
+                    actual_path = file_path.to_string();
+                }
+            }
+            if current_file_path == *EMPTY_STRING {
+                current_file_path = actual_path;
+            }
+            buffers.init_file_buffer(current_file_path.to_string());
         }
         if buffers.is_empty() {
             buffers.init_file_buffer(EMPTY_STRING.to_string());
@@ -90,6 +103,8 @@ impl Editor {
                 running: false,
                 input_field: EMPTY_STRING.to_string(),
             },
+            lock: Mutex::new(()),
+            last_save: Local::now(),
         }
     }
 
@@ -159,6 +174,7 @@ impl Editor {
                             }
                         }
                     }
+                    self.auto_save();
                 }
             }
         }
@@ -271,4 +287,53 @@ impl Editor {
         self.command_popup.running = false;
         self.command_popup.input_field = EMPTY_STRING.to_string();
     }
+
+    fn auto_save(&mut self) {
+        let _guard = self.lock.lock().unwrap();
+        let current = Local::now();
+        let last_save_duration = current.naive_local() - self.last_save.naive_local();
+        if last_save_duration.num_seconds() < 1 {
+            return;
+        };
+        for (path, buf) in self.buffers.files.iter() {
+            if path == EMPTY_STRING {
+                continue;
+            };
+            let file_bytes = to_bytes(&buf.file);
+            let bytes_slice: &[u8] = &file_bytes;
+            let Ok(mut file) = File::create(path) else {
+                continue;
+            };
+            if let Err(e) = file.write_all(bytes_slice) {
+                log_error(&e.to_string());
+            }
+            if let Err(e) = file.flush() {
+                log_error(&e.to_string());
+            }
+        }
+        self.last_save = Local::now();
+    }
+}
+
+fn to_bytes(buffer: &Vec<Vec<char>>) -> Vec<u8> {
+    let mut result = String::new();
+
+    for line in buffer {
+        for c in line {
+            result.push(*c);
+        }
+        result.push('\n'); // Optional: join lines with newlines
+    }
+
+    result.into_bytes() // returns Vec<u8>
+}
+
+fn log_error(msg: &str) {
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("error.log")
+        .unwrap();
+
+    writeln!(file, "{}", msg).unwrap();
 }
