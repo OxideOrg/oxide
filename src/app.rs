@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use std::io::{Write, stdout};
+use std::io::{stdout, Write};
 
 use crate::{
     cli::CliOpt,
@@ -8,8 +8,8 @@ use crate::{
     ui::FOOTER_SIZE,
 };
 use ratatui::{
-    DefaultTerminal,
     crossterm::event::{KeyCode, KeyEvent},
+    DefaultTerminal,
 };
 
 pub const APP_NAME: &str = "Oxide";
@@ -90,6 +90,7 @@ impl Editor {
                     u16::min(cursor_position.y, terminal_height),
                 ));
             })?;
+            let file_buffer = self.buffers.get_mut(self.current_file_path.clone());
             match self.events.next().await? {
                 Event::Tick => self.tick(),
                 Event::Crossterm(event) => {
@@ -107,6 +108,13 @@ impl Editor {
                         self.editor_mode = EditorMode::Normal;
                         Self::set_cursor_type(CursorType::Block);
                     }
+                    AppEvent::CreateLine => file_buffer.create_line(),
+                    AppEvent::WriteAfterCursor(input) => file_buffer.insert_char(input),
+                    AppEvent::DeleteBeforeCursor => file_buffer.delete_previous_position(),
+                    AppEvent::MoveLeft => file_buffer.move_cursor(Move::Left),
+                    AppEvent::MoveUp => file_buffer.move_cursor(Move::Up),
+                    AppEvent::MoveRight => file_buffer.move_cursor(Move::Right),
+                    AppEvent::MoveDown => file_buffer.move_cursor(Move::Down)
                 },
             }
         }
@@ -115,17 +123,16 @@ impl Editor {
 
     /// Handles the key events and updates the state of [`App`].
     pub fn handle_key_events(&mut self, key_event: KeyEvent) -> color_eyre::Result<()> {
-        let file_buffer = self.buffers.get_mut(self.current_file_path.clone());
         match key_event.code {
             KeyCode::Char('i') if self.editor_mode == EditorMode::Normal => {
                 self.events.send(AppEvent::NormalMode);
             }
             KeyCode::Char('a') if self.editor_mode == EditorMode::Normal => {
-                file_buffer.move_cursor(Move::Right);
+                self.events.send(AppEvent::MoveRight);
                 self.events.send(AppEvent::NormalMode);
             }
             KeyCode::Char(input) if self.editor_mode == EditorMode::Insert => {
-                file_buffer.insert_char(input);
+                self.events.send(AppEvent::WriteAfterCursor(input))
             }
             KeyCode::Esc if self.editor_mode == EditorMode::Insert => {
                 self.events.send(AppEvent::InsertMode);
@@ -134,22 +141,22 @@ impl Editor {
                 self.events.send(AppEvent::Quit)
             }
             KeyCode::Backspace if self.editor_mode == EditorMode::Insert => {
-                file_buffer.delete_previous_position();
+                self.events.send(AppEvent::DeleteBeforeCursor)
             }
             KeyCode::Enter if self.editor_mode == EditorMode::Insert => {
-                file_buffer.create_line();
+                self.events.send(AppEvent::CreateLine)
             }
             KeyCode::Left | KeyCode::Char('h') if self.editor_mode != EditorMode::Insert => {
-                file_buffer.move_cursor(Move::Left);
+                self.events.send(AppEvent::MoveLeft)
             }
             KeyCode::Up | KeyCode::Char('k') if self.editor_mode != EditorMode::Insert => {
-                file_buffer.move_cursor(Move::Up);
+                self.events.send(AppEvent::MoveUp)
             }
             KeyCode::Right | KeyCode::Char('l') if self.editor_mode != EditorMode::Insert => {
-                file_buffer.move_cursor(Move::Right);
+                self.events.send(AppEvent::MoveRight)
             }
             KeyCode::Down | KeyCode::Char('j') if self.editor_mode != EditorMode::Insert => {
-                file_buffer.move_cursor(Move::Down);
+                self.events.send(AppEvent::MoveDown)
             }
             /*KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
                 self.events.send(AppEvent::Quit)

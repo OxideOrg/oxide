@@ -96,6 +96,7 @@ impl FileBuffer {
     }
 
     pub fn create_line(&mut self) {
+        //TODO: Create line should create line at current position and not only after current line
         self.file.insert(self.current_line as usize + 1, vec![]);
         self.current_line += 1;
         self.current_column = 0;

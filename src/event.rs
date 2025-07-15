@@ -34,6 +34,13 @@ pub enum AppEvent {
     Quit,
     NormalMode,
     InsertMode,
+    MoveLeft,
+    MoveUp,
+    MoveRight,
+    MoveDown,
+    CreateLine,
+    WriteAfterCursor(char),
+    DeleteBeforeCursor,
 }
 
 /// Terminal event handler.
