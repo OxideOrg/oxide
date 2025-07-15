@@ -43,6 +43,10 @@ pub enum AppEvent {
     DeleteBeforeCursor,
     MoveToNextWord,
     MoveToPreviousWord,
+    CommandPopup,
+    WriteInCommandInput(char),
+    DeleteLastInCommandInput,
+    ExecuteCommand,
 }
 
 /// Terminal event handler.
