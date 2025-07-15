@@ -41,6 +41,8 @@ pub enum AppEvent {
     CreateLine,
     WriteAfterCursor(char),
     DeleteBeforeCursor,
+    MoveToNextWord,
+    MoveToPreviousWord,
 }
 
 /// Terminal event handler.

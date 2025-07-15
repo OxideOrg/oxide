@@ -154,4 +154,50 @@ impl FileBuffer {
             }
         };
     }
+
+    pub fn move_to_next_word(&mut self) {
+        let columns_number = self.get_mut().iter().count() as u16;
+        let mut index = self.current_column;
+        {
+            let line = self.get_mut();
+            let mut is_parsing_word = false;
+            while index < columns_number {
+                let Some(c) = line.get(index as usize) else {
+                    return;
+                };
+                if is_parsing_word && *c == ' ' {
+                    break;
+                }
+                if *c != ' ' {
+                    is_parsing_word = true;
+                }
+                index += 1;
+            }
+        }
+        self.current_column = index;
+    }
+
+    pub fn move_to_previous_word(&mut self) {
+        if self.current_column < 1 {
+            return;
+        };
+        let mut index = self.current_column - 1;
+        {
+            let line = self.get_mut();
+            let mut is_parsing_word = false;
+            while index > 0 {
+                let Some(c) = line.get(index as usize) else {
+                    return;
+                };
+                if is_parsing_word && *c == ' ' {
+                    break;
+                }
+                if *c != ' ' {
+                    is_parsing_word = true;
+                }
+                index -= 1;
+            }
+        }
+        self.current_column = index;
+    }
 }

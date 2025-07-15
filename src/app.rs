@@ -81,6 +81,7 @@ impl Editor {
 
     /// Run the application's main loop.
     pub async fn run(mut self, mut terminal: DefaultTerminal) -> color_eyre::Result<()> {
+        Self::set_cursor_type(CursorType::Block);
         let terminal_height =
             terminal.size().expect("Terminal should have size").height - FOOTER_SIZE - 1;
         while self.running {
@@ -122,6 +123,8 @@ impl Editor {
                             AppEvent::MoveUp => file_buffer.move_cursor(Move::Up),
                             AppEvent::MoveRight => file_buffer.move_cursor(Move::Right),
                             AppEvent::MoveDown => file_buffer.move_cursor(Move::Down),
+                            AppEvent::MoveToNextWord => file_buffer.move_to_next_word(),
+                            AppEvent::MoveToPreviousWord => file_buffer.move_to_previous_word(),
                         }
                     }
                 }
@@ -174,6 +177,12 @@ impl Editor {
             }
             KeyCode::Down | KeyCode::Char('j') if self.editor_mode != EditorMode::Insert => {
                 self.events.send(AppEvent::MoveDown)
+            }
+            KeyCode::Down | KeyCode::Char('w') if self.editor_mode != EditorMode::Insert => {
+                self.events.send(AppEvent::MoveToNextWord)
+            }
+            KeyCode::Down | KeyCode::Char('b') if self.editor_mode != EditorMode::Insert => {
+                self.events.send(AppEvent::MoveToPreviousWord)
             }
             /*KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
                 self.events.send(AppEvent::Quit)
