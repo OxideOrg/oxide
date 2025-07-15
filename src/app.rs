@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use std::io::{stdout, Write};
+use std::io::{Write, stdout};
 
 use crate::{
     cli::CliOpt,
@@ -8,8 +8,8 @@ use crate::{
     ui::FOOTER_SIZE,
 };
 use ratatui::{
-    crossterm::event::{KeyCode, KeyEvent},
     DefaultTerminal,
+    crossterm::event::{KeyCode, KeyEvent},
 };
 
 pub const APP_NAME: &str = "Oxide";
@@ -99,6 +99,14 @@ impl Editor {
                 }
                 Event::App(app_event) => match app_event {
                     AppEvent::Quit => self.quit(),
+                    AppEvent::NormalMode => {
+                        self.editor_mode = EditorMode::Insert;
+                        Self::set_cursor_type(CursorType::Line);
+                    }
+                    AppEvent::InsertMode => {
+                        self.editor_mode = EditorMode::Normal;
+                        Self::set_cursor_type(CursorType::Block);
+                    }
                 },
             }
         }
@@ -110,15 +118,17 @@ impl Editor {
         let file_buffer = self.buffers.get_mut(self.current_file_path.clone());
         match key_event.code {
             KeyCode::Char('i') if self.editor_mode == EditorMode::Normal => {
-                self.editor_mode = EditorMode::Insert;
-                Self::set_cursor_type(CursorType::Line);
+                self.events.send(AppEvent::NormalMode);
+            }
+            KeyCode::Char('a') if self.editor_mode == EditorMode::Normal => {
+                file_buffer.move_cursor(Move::Right);
+                self.events.send(AppEvent::NormalMode);
             }
             KeyCode::Char(input) if self.editor_mode == EditorMode::Insert => {
                 file_buffer.insert_char(input);
             }
             KeyCode::Esc if self.editor_mode == EditorMode::Insert => {
-                self.editor_mode = EditorMode::Normal;
-                Self::set_cursor_type(CursorType::Block);
+                self.events.send(AppEvent::InsertMode);
             }
             KeyCode::Esc if self.editor_mode == EditorMode::Normal => {
                 self.events.send(AppEvent::Quit)

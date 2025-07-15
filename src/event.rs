@@ -32,6 +32,8 @@ pub enum Event {
 #[derive(Clone, Debug)]
 pub enum AppEvent {
     Quit,
+    NormalMode,
+    InsertMode,
 }
 
 /// Terminal event handler.
