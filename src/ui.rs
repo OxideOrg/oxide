@@ -67,9 +67,10 @@ impl Widget for &Editor {
         if content_height > FOOTER_SIZE {
             let footer_y = area.y + area.height - FOOTER_SIZE; // last line inside border
             let footer_text = Span::raw(format!(
-                "Mode: {}    Current line : {}",
+                "Mode: {}    Current line : {}/{}",
                 self.editor_mode,
-                file_buffer.current_line + 1
+                file_buffer.current_line + 1,
+                file_buffer.lines_number,
             ));
             buf.set_span(
                 area.x + 1,

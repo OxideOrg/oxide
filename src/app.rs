@@ -245,13 +245,17 @@ impl Editor {
             KeyCode::Down | KeyCode::Char('j') if self.editor_mode != EditorMode::Insert => {
                 self.events.send(AppEvent::MoveDown)
             }
-            KeyCode::Down | KeyCode::Char('w') if self.editor_mode != EditorMode::Insert => {
+            KeyCode::Left => self.events.send(AppEvent::MoveLeft),
+            KeyCode::Up => self.events.send(AppEvent::MoveUp),
+            KeyCode::Right => self.events.send(AppEvent::MoveRight),
+            KeyCode::Down => self.events.send(AppEvent::MoveDown),
+            KeyCode::Char('w') if self.editor_mode != EditorMode::Insert => {
                 self.events.send(AppEvent::MoveToNextWord)
             }
-            KeyCode::Down | KeyCode::Char('b') if self.editor_mode != EditorMode::Insert => {
+            KeyCode::Char('b') if self.editor_mode != EditorMode::Insert => {
                 self.events.send(AppEvent::MoveToPreviousWord)
             }
-            KeyCode::Down | KeyCode::Char(':') if self.editor_mode != EditorMode::Insert => {
+            KeyCode::Char(':') if self.editor_mode != EditorMode::Insert => {
                 self.events.send(AppEvent::CommandPopup)
             }
             /*KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
