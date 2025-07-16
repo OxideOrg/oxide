@@ -50,9 +50,9 @@ impl FilesBuffers {
                 let mut buffer_line = vec![];
                 for c in line.chars() {
                     buffer_line.push(c);
-                    lines_number += 1;
                 }
                 buffer.push(buffer_line);
+                lines_number += 1;
             }
         } else {
             buffer.push(vec![]);
@@ -148,7 +148,7 @@ impl FileBuffer {
                 }
             }
             Move::Down => {
-                if self.current_line < self.lines_number {
+                if self.current_line + 1 < self.lines_number {
                     self.current_line += 1
                 }
             }
