@@ -13,7 +13,7 @@ pub enum Move {
 
 #[derive(Default, Debug, Clone)]
 pub struct FilesBuffers {
-    files: HashMap<String, FileBuffer>,
+    pub files: HashMap<String, FileBuffer>,
 }
 
 #[derive(Default, Debug, Clone)]
